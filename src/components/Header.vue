@@ -3,7 +3,9 @@
 
     <h1>Task Tracker</h1>
     <Button
-        text='Add Task' color='green' />
+        @btn-click="$emit('show-form')"
+        :text="isFormShow ? 'Close form':'Open form'"
+        :color="isFormShow ? 'red':'green'" />
   </header>
 
 </template>
@@ -17,6 +19,9 @@ export default {
   name: 'Header',
   components: {
     Button,
+  },
+  props: {
+    isFormShow: Boolean
   }
 }
 </script>

@@ -1,12 +1,18 @@
 <template>
   <div class='container'>
-    <Header />
-    <TaskForm @add-task='addTask' />
+    <Header
+        :isFormShow='isFormShow'
+        @show-form='toggleTaskForm' />
+    <div v-show='isFormShow'>
+      <TaskForm @add-task='addTask' />
+    </div>
+
     <Tasks
         @toggle-reminder='changeReminder'
         @delete-task="deleteTask" :tasks='tasks' />
+    <router-view></router-view>
+    <Footer />
   </div>
-
 </template>
 
 <script>
@@ -15,61 +21,75 @@
 import Header from './components/Header';
 import Tasks from './components/Tasks';
 import TaskForm from './components/TaskForm';
+import Footer from './components/Footer';
+
 
 export default {
   name: 'App',
   components: {
     Header,
     Tasks,
-    TaskForm
+    TaskForm,
+    Footer
 
   },
   data() {
     return {
-      tasks: []
+      tasks: [],
+      isFormShow: false,
     }
   },
   methods: {
-    deleteTask(id) {
+    async deleteTask(id) {
       if (confirm('Are you sure?')) {
-        this.tasks = this.tasks.filter(t => t.id !== id)
-      }
-    },
-    changeReminder(id) {
-      this.tasks = this.tasks.map(t => t.id === id ? { ...t, reminder: !t.reminder } : t)
-    },
-    addTask(task) {
+        try {
+          const res = await fetch(`api/tasks/${id}`, {
+            method: 'DELETE',
+          })
+          res.status === 200 ? this.tasks = this.tasks.filter(t => t.id !== id) : null
+        } catch (e) {
+          console.log('some error')
+        }
 
-      this.tasks = [task, ...this.tasks]
-    }
-  },
-  created() {
-    this.tasks = [
-      {
-        'text': 'Первая таска',
-        'day': 'May 5th at 1:30pm',
-        'reminder': true,
-        'id': 1
-      },
-      {
-        'text': 'Вторая таска',
-        'day': 'May 5th at 1:30pm',
-        'reminder': false,
-        'id': 2
-      },
-      {
-        'text': 'Первая таска',
-        'day': 'May 5th at 1:30pm',
-        'reminder': true,
-        'id': 3
-      },
-      {
-        'text': 'Вторая таска',
-        'day': 'May 5th at 1:30pm',
-        'reminder': false,
-        'id': 4
       }
-    ]
+    },
+    async changeReminder(id) {
+      const toggledTask = await this.fetchTask(id)
+      const updTask = { ...toggledTask, reminder: !toggledTask.reminder }
+      const res = await (await fetch(`api/tasks/${id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-type': 'application/json',
+        }, body: JSON.stringify(updTask)
+      })).json()
+
+      this.tasks = this.tasks.map(t => t.id === id ? { ...t, reminder: res.reminder } : t)
+    },
+    async addTask(task) {
+      const res = await fetch(`api/tasks`, {
+        method: 'POST',
+        headers: {
+          'Content-type': 'application/json',
+        }, body: JSON.stringify(task)
+      })
+      const data = await res.json()
+      this.tasks = [data, ...this.tasks]
+    },
+    toggleTaskForm() {
+      this.isFormShow = !this.isFormShow
+    },
+    async fetchTasks() {
+      return (await fetch(`api/tasks`)).json()
+    },
+    async fetchTask(id) {
+      return (await fetch(`api/tasks/${id}`)).json()
+    },
+
+  },
+  async created() {
+    this.tasks = await this.fetchTasks()
+
+
   }
 }
 </script>
